@@ -1,0 +1,80 @@
+# pytorch_movie_dataloader
+- Loading movie data which was converted to image files and passing to the model as `torch.Tensor` type.
+- Here is the sample code for [Kinetics 400](https://deepmind.com/research/open-source/kinetics).
+
+## Environment
+Tested on following configurations;
+- Windows 11, and wsl2 on it
+- Ubuntu 20.04
+- `Python 3.8.10` with 
+  - `torch==1.7.0` and `torchvision==0.8.1`
+
+## Features
+### Directory structure
+Directory structure of raw-data must be designed as following;
+- `root_path` is set in your source code.
+- Each names and extensions of an image file (in following case `image_00002` and `.jpg` are correspond to them) can be designed freely
+```
+root_path 
+    |-- classA
+    |   |-- hoge
+    |   |   |-- image_00001.jpg
+    |   |   |-- image_00002.jpg
+    |   |   :
+    |   |   `-- image_00030.jpg                     
+    |   `-- piyo
+    |       |-- image_00001.jpg
+    |       :
+    |   
+    |-- classB
+    |   |-- hogegege
+    |   |   |-- image_00001.jpg
+    |   |   :
+    :   :
+```
+
+### Automatic padding to non-readable image
+- To match all tensor shape of sampled batches which are supposed to **same image size and frequency** and **different stream  length**, pseudo image data (like `[PAD]` in NLP) is automatically generated.
+- Loading `[image_00002.jpg, image_00012.jpg, ... image_00032.jpg]` can be done by setting `strt_index=1`, `seg_span=5`, and `seg_num=4` in `VideoDataset()`  . 
+- If the number of image files is fewer than requirements, non-readable image is replaced to blank image.
+    - The above case, setting `start_index=1`, `seg_span=5`, and `seg_num=4` to read from `root path/class A/hoge` which contains 30 images seems to be fail because `image_00032.jpg` cannot be read. 
+    -  To avoid those problem, `image_00032.jpg` is replaced pseudo image created by `np.zeros((h, w, ch)` in this implementation. 
+
+### Batch outputs
+Tuple of 4 elements, implemented in the class method `__getitem__()` in `VideoDataset()`
+- elem[0]: `torch.Tensor` of images that shapes `[batch, sequence, ch, h, w]`
+- elem[1]: Tuple of class labels
+- elem[2]: `torch.Tensor` of class ID shapes `[batch, id]`
+- elem[3]: Tuple of directories to read image files
+- elem[4]: The number of blank image, unsigned integer
+
+## Run sample
+### Create virtual environment through conda
+Run [download.py](video_download/download.py) with interpreter `Python 2.7` and some packages
+```shell
+conda create -n kinetics_loading python=2.7
+conda activate kinetics_loading
+pip install -r video_download/requirements_for_py27.txt # install thorough pip
+```
+### Download kinetics sample (for Linux OS)
+Download a few sample (Taking a few minutes)
+```shell
+python ./video_download/download.py ./video_download/kinetics-400_val_4videos.csv ./data/kinetics_videos/
+```
+Create image files 
+```shell
+python ./video_download/separate_img.py ./data/kinetics_videos/ ./data/kinetics_images/
+```
+### See results (Both Windows and Linux)
+Activate appropriate interpreter (Python 3.8 or more) and run;
+```shell
+python sample.py
+```
+- It shows the example of outputs the shape of which is mentioned in `Batch outputs`
+- Argument `path_delim` of `VideoDataset()` constructor **MUST BE**
+  - `\\` for **Windows OS**
+  - `/` for **Linux OS**
+
+## Reference
+- [pytorch_advanced
+](https://github.com/YutaroOgawa/pytorch_advanced)

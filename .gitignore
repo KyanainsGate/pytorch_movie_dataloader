@@ -1,0 +1,14 @@
+# IDE files
+.vscode/
+venv/
+.idea/
+__pycache__/
+
+# tmp files
+created_data/
+raw_data/
+tmp/
+data/
+
+# dataset
+*.zip

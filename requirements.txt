@@ -1,0 +1,5 @@
+torchvision
+pillow
+matplotlib
+opencv-python
+pandas
