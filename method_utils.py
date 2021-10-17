@@ -22,6 +22,17 @@ class MultiSegmentVideoList:
                  shift_inflation=False,
                  inflation_ratio=1.,
                  ):
+        """
+
+        @param root_path:
+        @param seg_span:
+        @param seg_len:
+        @param strt_index:
+        @param search_ext:
+        @param ignore_exts:
+        @param shift_inflation:
+        @param inflation_ratio:
+        """
         assert strt_index >= 1, "Set variable strt_index above 1, (default: 1)"
         self.shift_inflation = shift_inflation
         self.inflation_ratio = inflation_ratio  # TODO implementation
@@ -69,9 +80,10 @@ class MultiSegmentVideoList:
                 imag_num = len(image_files)
                 max_index = imag_num - 1
                 # Count the number of available segment
-                top_indices = np.arange(start=strt_index - 1, stop=max_index, step=seg_span * (seg_len - 1) + 1)
+                # top_indices = np.arange(start=strt_index - 1, stop=max_index, step=seg_span * (seg_len - 1) + 1)
+                top_indices = np.arange(start=strt_index, stop=max_index, step=seg_span * (seg_len - 1) + 1)
                 if self.shift_inflation:
-                    top_indices = np.arange(start=strt_index - 1, stop=max_index)
+                    top_indices = np.arange(start=strt_index, stop=max_index)
                     pass
                 end_indices = top_indices + seg_span * (seg_len - 1)
                 rectified_end_indices = np.where((end_indices > max_index), -1, end_indices)

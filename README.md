@@ -80,6 +80,32 @@ python sample2.py
 - Note that the first argument of `VideoDataset()` is different from `sample.py`
     - sample.py  ... the video directories like `[root_path/classA/hoge, root_path/classA/piyo, ..., ]`
     - sample2.py ... filenames like `[root_path/classA/hoge/image_00008.jpg, root_path/classA/piyo/image_00058.jpg, ..., ]`
+
+## Annotation loading
+### Overview
+If the corresponding annotation files are also stored like following structure, class `VideoDatasetWithAnnotation()` supplies the annotation loading while loading image files;
+
+```
+root_path_of_annotation 
+    |-- classA
+    |   |-- hoge.txt
+    |   `-- piyo.txt
+    |   
+    |-- classB
+    |   |-- hogegege.txt
+    |   |   :
+    :   :
+```
+
+### Sample
+The annotation format is reference to 
+```shell
+python sample_anno.py
+```
+- The annotation format references to the [The Toyota Smarthome Untrimmed dataset](https://project.inria.fr/toyotasmarthome/)
+- The 6th outputs of batch output (=`elem[5]:`) is class labels of each frame
+
 ## Reference
 - [pytorch_advanced
 ](https://github.com/YutaroOgawa/pytorch_advanced)
+- Project page of [Toyota Smart Home](https://project.inria.fr/toyotasmarthome/)
