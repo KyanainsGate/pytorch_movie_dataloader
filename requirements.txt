@@ -3,3 +3,4 @@ pillow
 matplotlib
 opencv-python
 pandas
+tqdm

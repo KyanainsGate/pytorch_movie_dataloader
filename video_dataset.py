@@ -5,8 +5,6 @@
 
 # 必要なパッケージのimport
 import os
-from multiprocessing import Pool
-import time
 
 from PIL import Image
 import numpy as np
@@ -26,40 +24,51 @@ def _load_psuedo_true_img(filename):
 
 
 class VideoDataset(torch.utils.data.Dataset):
-    def __init__(self, video_list, label_id_dict, seg_span, seg_num,
-                 phase, transform, slash_sp_num=1, path_delim="\\",
+    def __init__(self, video_list, label_id_dict, seg_span, seg_len,
+                 phase, transform, slash_sp_num=1,
                  img_tmpl='image_{:05d}.jpg',
                  strt_index=1,
                  cpu_thread=1,
+                 multi_segment=False,
+                 top_file2indices=None
                  ):
         """
         Constructor for building torch.Dataset
 
-        @param video_list:
+        @param video_list: a list of image-saved directories or image-paths. If image-paths, multi_segment must be True.
         @param label_id_dict:
         @param seg_span:
-        @param seg_num:
+        @param seg_len:
         @param phase:
         @param transform:
         @param slash_sp_num:
-        @param path_delim:
         @param img_tmpl:
         @param strt_index:
         @param cpu_thread:
+        @param multi_segment:
+        @param top_file2indices:
         """
         self.video_list = video_list  # 動画画像のフォルダへのパスリスト
         self.label_id_dict = label_id_dict  # ラベル名をidに変換する辞書型変数
         self.seg_span = seg_span  # Define delta t of images
-        self.seg_num = seg_num  # Fixed time series length to feed,
+        self.seg_len = seg_len  # Fixed time series length to feed,
         self.phase = phase  # train or val
         self.transform = transform  # 前処理
         self.slash_sp_num = slash_sp_num
         self.img_tmpl = img_tmpl  # 読み込みたい画像のファイル名のテンプレート
         self.strt_index = strt_index
         self.debug_cnt = 1
-        self.path_delim = path_delim  # "/" for Linux, "\\" for windows
         self.cpu_thread = cpu_thread  # Set thread num for loading image parallelly
         self.null_img_num = 0
+        self.top_file2indices = top_file2indices
+
+        # Add for multi segment
+        self.multi_segment = multi_segment  # loading multi segment mode
+        if multi_segment:
+            assert self.top_file2indices is not None, "Set video_list2indices "
+            self._video_top_dirnames = [os.path.dirname(elem) for elem in self.video_list]
+            self.video_top_dirnames_witouhdip = list(dict.fromkeys(self._video_top_dirnames))
+            # print(self.video_top_dirnames_witouhdip)
 
     def __len__(self):
         return len(self.video_list)
@@ -78,6 +87,10 @@ class VideoDataset(torch.utils.data.Dataset):
         imgs_transformed, label, label_id, dir_path, null_img_num = self._pull_item(index)
         return imgs_transformed, label, label_id, dir_path, null_img_num
 
+    def _indices_from_topfile(self, top_image_filepath):
+        indices = self.top_file2indices[top_image_filepath]
+        return indices
+
     def _pull_item(self, index):
         """
         The implementation of the method __getitem__()
@@ -86,19 +99,29 @@ class VideoDataset(torch.utils.data.Dataset):
         @return:
         """
 
-        # 1. Set directories to load raw-image
-        dir_path = self.video_list[index]  # 画像が格納されたフォルダ
-        indices = self._get_eq_spaced_indices(dir_path)  # 読み込む画像idxを求める
+        if self.multi_segment:
+            top_image_filepath = self.video_list[index]
+            dir_path = os.path.dirname(top_image_filepath)  # 画像が格納されたフォルダ
+            indices = self.top_file2indices[top_image_filepath]
+            loading_key = top_image_filepath
+        else:
+            # 1. Set directories to load raw-image
+            dir_path = self.video_list[index]  # 画像が格納されたフォルダ
+            indices = self._get_eq_spaced_indices(dir_path)  # 読み込む画像idxを求める
+            loading_key = dir_path
+            pass
+        # indices = self._get_eq_spaced_indices(dir_path)  # 読み込む画像idxを求める
         # 1.5 Loading image while counting the number of blank images
         img_group, null_img_num = self._load_imgs(
             dir_path, self.img_tmpl, indices)  # リストに読み込む
         # 2.Get label / label_id
-        label = dir_path.split(self.path_delim)[self.slash_sp_num]  # 注意：windowsOSの場合
+        path_delim = "\\" if os.name == 'nt' else "/"
+        label = dir_path.split(path_delim)[self.slash_sp_num]  # 注意：windowsOSの場合
         label_id = self.label_id_dict[label]  # idを取得
         # 3. Run Pre-process to image tensor
         imgs_transformed = self.transform(img_group, phase=self.phase)
 
-        return imgs_transformed, label, label_id, dir_path, null_img_num
+        return imgs_transformed, label, label_id, loading_key, null_img_num
 
     def _load_imgs(self, dir_path, img_tmpl, indices):
         """
@@ -120,14 +143,8 @@ class VideoDataset(torch.utils.data.Dataset):
                 null_img_num += 1
             else:
                 pass
-        # now_ = time.time()
         # Single Process
         img_group = [_load_psuedo_true_img(file) for file in filepath]
-        # Multiprocess
-        # p = Pool(self.cpu_thread)  #
-        # img_group = p.map(_load_psuedo_true_img, out_)
-        # p.close()
-        # print('Elapsed : ', time.time() - now_)
         return img_group, null_img_num
 
     def _get_filepath_lst(self, dir_path, img_tmpl, indices):
@@ -155,8 +172,8 @@ class VideoDataset(torch.utils.data.Dataset):
     def _get_eq_spaced_indices(self, dir_path):
         """
         Make indices of loading image as List
-        (e.g.) return = [strt_index, strt_index+1*seg_span, ..., strt_index+(seg_num-1)*seg_span].
-        All variables such as  strt_index, seg_span and seg_num are set by this class constructor
+        (e.g.) return = [strt_index, strt_index+1*seg_span, ..., strt_index+(seg_len-1)*seg_span].
+        All variables such as  strt_index, seg_span and seg_len are set by this class constructor
 
         If element is not exist,  ID is set as "-1" and create pseudo image by np.zeros()
 
@@ -165,9 +182,10 @@ class VideoDataset(torch.utils.data.Dataset):
         """
         file_list = os.listdir(path=dir_path)
         num_frames = len(file_list)
+        # TODO Check whether start==self.strt_index works correct or NOT, it may shoud be "self.strt_index -1" ...
         indices = np.arange(self.strt_index, stop=num_frames - 1,
                             step=self.seg_span)  # [strt, strt+1*seg_span, strt+ 2*seg_span, ... , ]
-        indices = indices[0:self.seg_num] if len(indices) > self.seg_num else indices
+        indices = indices[0:self.seg_len] if len(indices) > self.seg_len else indices
         indices = np.append(indices,
-                            ([-1 for _ in range(self.seg_num - len(indices))]))  # idx -1 always means <PAD> image
+                            ([-1 for _ in range(self.seg_len - len(indices))]))  # idx -1 always means <PAD> image
         return indices.astype(np.int32)
