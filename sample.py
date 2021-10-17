@@ -7,7 +7,7 @@ from transform_utils import VideoTransform
 from method_utils import make_datapath_list, get_c2i_i2c_from_dir_hrc, get_mean_and_std, save_input_animation
 
 if __name__ == '__main__':
-    # vieo_listの作成
+    # video_listの作成
     root_path = os.path.join('data', 'kinetics_images')
     video_list = make_datapath_list(root_path)
     cls2id, _ = get_c2i_i2c_from_dir_hrc(root_path)

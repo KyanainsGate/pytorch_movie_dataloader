@@ -28,7 +28,6 @@ class VideoDataset(torch.utils.data.Dataset):
                  phase, transform, slash_sp_num=1,
                  img_tmpl='image_{:05d}.jpg',
                  strt_index=1,
-                 cpu_thread=1,
                  multi_segment=False,
                  top_file2indices=None
                  ):
@@ -36,17 +35,17 @@ class VideoDataset(torch.utils.data.Dataset):
         Constructor for building torch.Dataset
 
         @param video_list: a list of image-saved directories or image-paths. If image-paths, multi_segment must be True.
-        @param label_id_dict:
-        @param seg_span:
-        @param seg_len:
-        @param phase:
-        @param transform:
-        @param slash_sp_num:
-        @param img_tmpl:
-        @param strt_index:
-        @param cpu_thread:
-        @param multi_segment:
-        @param top_file2indices:
+        @param label_id_dict: The dictionary for label to ID
+        @param seg_span: Skip length to load image files per segment
+        @param seg_len: Total length of segment
+        @param phase: Set "train" or "val"
+        @param transform: class the __call__() of which return torchvision.transforms.Compose() given phase
+        @param slash_sp_num: The distance of class name labeled directory from the working directory
+        @param img_tmpl: the image file template (Default: image_00001.jpg, image_00002.jpg, ....)
+        @param strt_index: The index of top loading image. (e.g.) strt_index=3 means loading start from image_00003.jpg
+        @param multi_segment: Switch multi_segment Mode(filepath are set as video_list) or NOT (directory names are set)
+        @param top_file2indices: The matrix the shape of which is (video_list, seg_len).
+               Must be set when multi_segment == True
         """
         self.video_list = video_list  # 動画画像のフォルダへのパスリスト
         self.label_id_dict = label_id_dict  # ラベル名をidに変換する辞書型変数
@@ -58,7 +57,6 @@ class VideoDataset(torch.utils.data.Dataset):
         self.img_tmpl = img_tmpl  # 読み込みたい画像のファイル名のテンプレート
         self.strt_index = strt_index
         self.debug_cnt = 1
-        self.cpu_thread = cpu_thread  # Set thread num for loading image parallelly
         self.null_img_num = 0
         self.top_file2indices = top_file2indices
 
@@ -115,8 +113,8 @@ class VideoDataset(torch.utils.data.Dataset):
         img_group, null_img_num = self._load_imgs(
             dir_path, self.img_tmpl, indices)  # リストに読み込む
         # 2.Get label / label_id
-        path_delim = "\\" if os.name == 'nt' else "/"
-        label = dir_path.split(path_delim)[self.slash_sp_num]  # 注意：windowsOSの場合
+        path_delim = "\\" if os.name == 'nt' else "/"  # Deliminator detection whether windows or not
+        label = dir_path.split(path_delim)[self.slash_sp_num]
         label_id = self.label_id_dict[label]  # idを取得
         # 3. Run Pre-process to image tensor
         imgs_transformed = self.transform(img_group, phase=self.phase)
@@ -183,6 +181,7 @@ class VideoDataset(torch.utils.data.Dataset):
         """
         file_list = os.listdir(path=dir_path)
         num_frames = len(file_list)
+        # TODO Check whether start==self.strt_index works correct or NOT, it may shoud be "self.strt_index -1" ...
         indices = np.arange(self.strt_index, stop=num_frames - 1,
                             step=self.seg_span)  # [strt, strt+1*seg_span, strt+ 2*seg_span, ... , ]
         indices = indices[0:self.seg_len] if len(indices) > self.seg_len else indices
