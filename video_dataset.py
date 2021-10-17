@@ -137,6 +137,7 @@ class VideoDataset(torch.utils.data.Dataset):
 
         # Get images's filepath to load
         filepath = self._get_filepath_lst(dir_path, img_tmpl, indices)
+        # print("[Debug]", indices, filepath)  # Comment-out to validate the indices and filepath
         # Count psuedo image num
         for elem in filepath:
             if "[pad]" in elem:
@@ -182,7 +183,6 @@ class VideoDataset(torch.utils.data.Dataset):
         """
         file_list = os.listdir(path=dir_path)
         num_frames = len(file_list)
-        # TODO Check whether start==self.strt_index works correct or NOT, it may shoud be "self.strt_index -1" ...
         indices = np.arange(self.strt_index, stop=num_frames - 1,
                             step=self.seg_span)  # [strt, strt+1*seg_span, strt+ 2*seg_span, ... , ]
         indices = indices[0:self.seg_len] if len(indices) > self.seg_len else indices

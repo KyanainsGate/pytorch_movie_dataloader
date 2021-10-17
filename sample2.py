@@ -5,7 +5,7 @@ import torch.utils.data
 
 from video_dataset import VideoDataset
 from transform_utils import VideoTransform
-from method_utils import make_datapath_list, get_c2i_i2c_from_dir_hrc, show_img, get_mean_and_std, MultiSegmentVideoList
+from method_utils import get_c2i_i2c_from_dir_hrc, show_img, get_mean_and_std, MultiSegmentVideoList
 
 if __name__ == '__main__':
     # vieo_listの作成
