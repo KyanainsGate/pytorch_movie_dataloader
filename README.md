@@ -77,7 +77,9 @@ In `sample.py`, since key image file names (which is instead of the base path of
 python sample2.py
 ```
 - Use this if the number of image files are greater than  `seg_span * seg_len`
-
+- Note that the first argument of `VideoDataset()` is different from `sample.py`
+    - sample.py  ... the video directories like `[root_path/classA/hoge, root_path/classA/piyo, ..., ]`
+    - sample2.py ... filenames like `[root_path/classA/hoge/image_00008.jpg, root_path/classA/piyo/image_00058.jpg, ..., ]`
 ## Reference
 - [pytorch_advanced
 ](https://github.com/YutaroOgawa/pytorch_advanced)

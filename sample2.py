@@ -11,7 +11,7 @@ if __name__ == '__main__':
     # vieo_listの作成
     root_path = os.path.join('data', 'kinetics_images')
 
-    videolist_with_path = MultiSegmentVideoList(root_path, seg_span=5, seg_len=16, strt_index=3)
+    videolist_with_path = MultiSegmentVideoList(root_path, seg_span=5, seg_len=16, strt_index=8)
     top_images, top_file2indices = videolist_with_path()
     cls2id, _ = get_c2i_i2c_from_dir_hrc(root_path)
 
@@ -23,8 +23,9 @@ if __name__ == '__main__':
     # Instance of torch.utils.data.Dataset
     val_dataset = VideoDataset(top_images,
                                label_id_dict=cls2id,
-                               seg_span=2,
-                               seg_len=5,
+                               seg_span=5,
+                               seg_len=16,
+                               strt_index=8,
                                phase="val",
                                transform=video_transform,
                                slash_sp_num=2,
