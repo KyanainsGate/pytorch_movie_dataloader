@@ -85,7 +85,7 @@ class MultiSegmentVideoList:
                 top_indices = np.arange(start=strt_index - 1, stop=max_index, step=seg_span * (seg_len - 1) + 1)
                 # top_indices = np.arange(start=strt_index, stop=max_index, step=seg_span * (seg_len - 1) + 1)
                 if self.shift_inflation:
-                    top_indices = np.arange(start=strt_index, stop=max_index)
+                    top_indices = np.arange(start=strt_index - 1, stop=max_index)
                     pass
                 end_indices = top_indices + seg_span * (seg_len - 1)
                 rectified_end_indices = np.where((end_indices > max_index), -1, end_indices)
