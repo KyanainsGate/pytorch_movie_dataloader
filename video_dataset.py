@@ -72,7 +72,6 @@ class VideoDataset(torch.utils.data.Dataset):
                 0] == self.seg_span, "Match seg_len to the step of the value of Dictionary top_file2indices"
             assert self.top_file2indices[self.video_list[0]][
                        0] == strt_index, "Match strt_index to the first element of top_file2indices's first Value"
-
             self._video_top_dirnames = [os.path.dirname(elem) for elem in self.video_list]
             self.video_top_dirnames_witouhdip = list(dict.fromkeys(self._video_top_dirnames))
             # print(self.video_top_dirnames_witouhdip)
@@ -179,7 +178,8 @@ class VideoDataset(torch.utils.data.Dataset):
 
     def _get_eq_spaced_indices(self, dir_path):
         """
-        Make indices of loading image as List
+        Make indices of loading image as List, they are in {-1, 1, 2, 3, ...}.
+        *@note indices must NOT be 0
         (e.g.) return = [strt_index, strt_index+1*seg_span, ..., strt_index+(seg_len-1)*seg_span].
         All variables such as  strt_index, seg_span and seg_len are set by this class constructor
 

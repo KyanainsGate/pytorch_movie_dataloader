@@ -62,7 +62,6 @@ class VideoDatasetWithAnnotation(VideoDataset):
         return imgs_transformed, label, label_id, dir_path, null_img_num, annotations_id
 
     def _load_annotation(self, top_image_filepath):
-        # print(top_image_filepath)
         # 1. Load annotation filepath from directory structure
         match_annotation_filename = self.img_dir2anno_dir[
             os.path.dirname(top_image_filepath) if os.path.isfile(top_image_filepath) else top_image_filepath]
@@ -72,8 +71,10 @@ class VideoDatasetWithAnnotation(VideoDataset):
         # 3. Indices of image frame number like [1, 11, ..., -1, -1]
         #    corresponding to images files such as [image0001.jpg, image00011.jpg, ..., PAD, PAD]
         # print(self.top_file2indices)
-        # indices = self.top_file2indices[top_image_filepath]
-        indices = self._get_eq_spaced_indices(top_image_filepath)
+        if os.path.isfile(top_image_filepath):
+            indices = self.top_file2indices[top_image_filepath]
+        else:
+            indices = self._get_eq_spaced_indices(top_image_filepath)
         # 4 Indices may include "-1" means "PAD". So to avoid confusion come from it,
         if not -1 in indices:
             # No padding included
@@ -86,6 +87,7 @@ class VideoDatasetWithAnnotation(VideoDataset):
                   in range(len(indices))]
             pass
         label = [self.annotated_classes[int(i)] for i in id]
+        # print("[Debug] pooled annotation ", top_image_filepath, indices)
         return np.array(id), label
 
     def _get_clsid_from_annotation(self, annotation_filename: str, total_frmaes: int, class_list: list):
