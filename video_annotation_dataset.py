@@ -20,6 +20,7 @@ class VideoDatasetWithAnnotation(VideoDataset):
                  slash_sp_num=1,
                  img_tmpl='image_{:05d}.jpg',
                  strt_index=1,
+                 cpu_thread=1,
                  multi_segment=False,
                  top_file2indices=None,
                  ):
@@ -27,13 +28,12 @@ class VideoDatasetWithAnnotation(VideoDataset):
                          phase, transform, slash_sp_num,
                          img_tmpl,
                          strt_index,
+                         cpu_thread,
                          multi_segment,
                          top_file2indices
                          )
         self.anno_list = anno_list
-        self.img_dir2anno_dir = {k: v for k, v in
-                                 zip((self.video_top_dirnames_witouhdip if os.path.isfile(
-                                     video_list[0]) else video_list), anno_list)}
+        self.img_dir2anno_dir = {k: v for k, v in zip(self.video_top_dirnames_witouhdip, anno_list)}
         self.annotated_classes = annotated_classes
         self.video_frames = video_frames
         self.video2anno = self._frame2cls_label(anno_list, self.video_frames, self.annotated_classes)
@@ -42,7 +42,9 @@ class VideoDatasetWithAnnotation(VideoDataset):
         # print(self.annotated_classes)
         # print(self.video_frames)
         # print(self.video2anno)
+
         # print(self.top_file2indices)
+
         pass
 
     def __getitem__(self, index):
@@ -62,18 +64,14 @@ class VideoDatasetWithAnnotation(VideoDataset):
         return imgs_transformed, label, label_id, dir_path, null_img_num, annotations_id
 
     def _load_annotation(self, top_image_filepath):
-        # print(top_image_filepath)
         # 1. Load annotation filepath from directory structure
-        match_annotation_filename = self.img_dir2anno_dir[
-            os.path.dirname(top_image_filepath) if os.path.isfile(top_image_filepath) else top_image_filepath]
+        match_annotation_filename = self.img_dir2anno_dir[os.path.dirname(top_image_filepath)]
         # 2. the dictionary the Key of which is annotation_filepath and corresponding Value is ndarray
         #    of class label thorough time series. That is used for the table of class selection when given indices.
         class_labels_in_annofile = self.video2anno[match_annotation_filename]
         # 3. Indices of image frame number like [1, 11, ..., -1, -1]
         #    corresponding to images files such as [image0001.jpg, image00011.jpg, ..., PAD, PAD]
-        # print(self.top_file2indices)
-        # indices = self.top_file2indices[top_image_filepath]
-        indices = self._get_eq_spaced_indices(top_image_filepath)
+        indices = self.top_file2indices[top_image_filepath]
         # 4 Indices may include "-1" means "PAD". So to avoid confusion come from it,
         if not -1 in indices:
             # No padding included
@@ -94,15 +92,14 @@ class VideoDatasetWithAnnotation(VideoDataset):
 
         @param annotation_filename: csv filename having the index of
             - "event" as class name
-            - "start_frame" as event start frame, 1,2,3,4, ...,
-            - "end_frame" as event end frame. 2,3,4, ...,
+            - "start_frame" as event start frame,
+            - "end_frame" as event end frame.
         @param total_frmaes: the total images, unsigned integer
         @param class_list: the list that all class are supposed to be defined
         @return: np.array of which element is correspond to class ID and the length is equal to total_frmaes.
         """
         # TODO Handling of duplicated labels. To avoid duplication,
         #  in this implementation class_id is overridden by following for loop
-        #  (e.g.)
         df = pd.read_csv(annotation_filename)
         frame2cls = np.zeros(total_frmaes)
         for idx in df.index.values:
@@ -112,7 +109,7 @@ class VideoDatasetWithAnnotation(VideoDataset):
             # That's why, it is necessary "-1" for start_frame
             frame2cls[annotation["start_frame"] - 1:annotation["end_frame"]] = cls_id
             pass
-        # print("[Debug] annotation ", annotation_filename, "len=", len(frame2cls), frame2cls[178:191])
+        # print(annotation_filename, len(frame2cls), frame2cls[178:191])
         return frame2cls
 
     def _frame2cls_label(self, annotations: list, frames: list, classes: list):
