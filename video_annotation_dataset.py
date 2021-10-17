@@ -100,6 +100,7 @@ class VideoDatasetWithAnnotation(VideoDataset):
         """
         # TODO Handling of duplicated labels. To avoid duplication,
         #  in this implementation class_id is overridden by following for loop
+        #  (e.g.)
         df = pd.read_csv(annotation_filename)
         frame2cls = np.zeros(total_frmaes)
         for idx in df.index.values:
