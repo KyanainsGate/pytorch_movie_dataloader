@@ -80,15 +80,20 @@ class MultiSegmentVideoList:
                 imag_num = len(image_files)
                 max_index = imag_num - 1
                 # Count the number of available segment
-                # top_indices = np.arange(start=strt_index - 1, stop=max_index, step=seg_span * (seg_len - 1) + 1)
-                top_indices = np.arange(start=strt_index, stop=max_index, step=seg_span * (seg_len - 1) + 1)
+                # Because top_indices will be used for file search index from the result of glob.glob()
+                # image_0001.jpeg is equal to ID=0
+                top_indices = np.arange(start=strt_index - 1, stop=max_index, step=seg_span * (seg_len - 1) + 1)
+                # top_indices = np.arange(start=strt_index, stop=max_index, step=seg_span * (seg_len - 1) + 1)
                 if self.shift_inflation:
                     top_indices = np.arange(start=strt_index, stop=max_index)
                     pass
                 end_indices = top_indices + seg_span * (seg_len - 1)
                 rectified_end_indices = np.where((end_indices > max_index), -1, end_indices)
+                # Because indices_mat will be used for file search
+                # by identifying whether that element is included in file name or NOT,
+                # image_0001.jpeg is equal to ID=1
                 indices_mat = np.array(
-                    [np.arange(start=top_indices[i], stop=end_indices[i] + seg_span, step=seg_span) for i in
+                    [np.arange(start=1 + top_indices[i], stop=end_indices[i] + seg_span, step=seg_span) for i in
                      range(len(top_indices))])
                 rectified_indices_mat = np.where((indices_mat > max_index), -1, indices_mat)
                 # print(file_name)
