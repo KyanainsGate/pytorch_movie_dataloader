@@ -35,9 +35,9 @@ root_path
 
 ### Automatic padding to non-readable image
 - To match all tensor shape of sampled batches which are supposed to **same image size and frequency** and **different stream  length**, pseudo image data (like `[PAD]` in NLP) is automatically generated.
-- Loading `[image_00002.jpg, image_00012.jpg, ... image_00032.jpg]` can be done by setting `strt_index=1`, `seg_span=5`, and `seg_num=4` in `VideoDataset()`  . 
+- Loading `[image_00002.jpg, image_00012.jpg, ... image_00032.jpg]` can be done by setting `strt_index=1`, `seg_span=5`, and `seg_len=4` in `VideoDataset()`  . 
 - If the number of image files is fewer than requirements, non-readable image is replaced to blank image.
-    - The above case, setting `start_index=1`, `seg_span=5`, and `seg_num=4` to read from `root path/class A/hoge` which contains 30 images seems to be fail because `image_00032.jpg` cannot be read. 
+    - The above case, setting `start_index=1`, `seg_span=5`, and `seg_len=4` to read from `root path/class A/hoge` which contains 30 images seems to be fail because `image_00032.jpg` cannot be read. 
     -  To avoid those problem, `image_00032.jpg` is replaced pseudo image created by `np.zeros((h, w, ch)` in this implementation. 
 
 ### Batch outputs
@@ -71,9 +71,12 @@ Activate appropriate interpreter (Python 3.8 or more) and run;
 python sample.py
 ```
 - It shows the example of outputs the shape of which is mentioned in `Batch outputs`
-- Argument `path_delim` of `VideoDataset()` constructor **MUST BE**
-  - `\\` for **Windows OS**
-  - `/` for **Linux OS**
+
+In `sample.py`, since key image file names (which is instead of the base path of image files) are fed to the constructor `VideoDataset()` as `video_list`, the result of elem[3] and argument is different from `sample.py`. 
+```shell
+python sample2.py
+```
+- Use this if the number of image files are greater than  `seg_span * seg_len`
 
 ## Reference
 - [pytorch_advanced
