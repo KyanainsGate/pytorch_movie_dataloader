@@ -88,7 +88,7 @@ class VideoDatasetWithAnnotation(VideoDataset):
             pass
         label = [self.annotated_classes[int(i)] for i in id]
         # print("[Debug] pooled annotation ", top_image_filepath, indices)
-        return np.array(id), label
+        return np.array(id).astype(float), label
 
     def _get_clsid_from_annotation(self, annotation_filename: str, total_frmaes: int, class_list: list):
         """
