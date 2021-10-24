@@ -21,6 +21,7 @@ class MultiSegmentVideoList:
                  ignore_exts=[".mp4", ".txt", ".csv", ".zip"],
                  shift_inflation=False,
                  inflation_ratio=1.,
+                 load_from="root_path",
                  ):
         """
 
@@ -33,105 +34,150 @@ class MultiSegmentVideoList:
         @param shift_inflation:
         @param inflation_ratio:
         """
-        assert strt_index >= 1, "Set variable strt_index above 1, (default: 1)"
+        __ACCEPTABLE_LOAD_FROM_STYLE = ["root_path", "image_stored_dir", "movie_file"]
+        assert strt_index >= 1, "Set variable strt_index above 1, (default: 1)"  # TODO Correct to read image_00000.jpg
+        assert load_from in __ACCEPTABLE_LOAD_FROM_STYLE, "Set argument `load_from` from {} (Default : {})".format(
+            __ACCEPTABLE_LOAD_FROM_STYLE, __ACCEPTABLE_LOAD_FROM_STYLE[0])
         self.shift_inflation = shift_inflation
         self.inflation_ratio = inflation_ratio  # TODO implementation
         # Data creation
-        self.video_list = []
-        self.top_images = []
         self.total_frames = []
-        # Top indices
-        self.video_list2top_indices = {}
-        self.video_list2top_files = {}
-        # End indices
-        self.video_list2end_indices = {}
-        self.video_list2end_files = {}
-        # Indices matrix
-        self.video_list2mat = {}
-        self.video_list2mat_rect = {}
+        self.total_segments = 0
 
-        # top_path2indices
-        self.top_file2indices = {}
-
-        self._make_datapath_with_mutiseg(root_path=root_path,
-                                         seg_span=seg_span,
-                                         seg_len=seg_len,
-                                         strt_index=strt_index,
-                                         search_ext=search_ext,
-                                         ignore_exts=ignore_exts
-                                         )
+        if load_from == "root_path":
+            self.top_images, self.top_file2indices, self.total_frames, self.total_segments = self._make_datapath_with_mutiseg(
+                root_path=root_path,
+                seg_span=seg_span,
+                seg_len=seg_len,
+                strt_index=strt_index,
+                search_ext=search_ext,
+                ignore_exts=ignore_exts
+            )
+        elif load_from == "image_stored_dir":
+            top_images, rectified_indices_mat, segments_num = self._create_indices_by_filename(
+                img_stored_dir=root_path,
+                seg_span=seg_span,
+                seg_len=seg_len,
+                strt_index=strt_index,
+                search_ext=search_ext,
+            )
+            self.top_images = top_images
+            self.top_file2indices = {top_image: rectified_indices_mat[i] for i, top_image in enumerate(top_images)}
+            self.total_frames = [segments_num]
+            self.total_segments = segments_num
+            pass
+        else:
+            raise NotImplementedError()
 
     def __len__(self):
-        return self.__total_segments
+        return self.total_segments
 
     def __call__(self, *args, **kwargs):
         return self.top_images, self.top_file2indices
 
-    def _make_datapath_with_mutiseg(self, root_path, seg_span, seg_len, strt_index, search_ext, ignore_exts):
+    def _create_indices_by_filename(self, img_stored_dir: str, seg_span, seg_len, strt_index, search_ext):
+        """
 
-        total_segments = 0
+        @param image_files:
+        @param seg_span:
+        @param seg_len:
+        @param strt_index:
+        @return:
+        """
+        image_files = sorted(glob.glob(os.path.join(img_stored_dir, search_ext)))
+        print(image_files[-1])
+
+        imag_num = len(image_files)
+        # max_index = imag_num - 1
+        max_index = imag_num
+        # Count the number of available segment
+        # Because top_indices will be used for file search index from the result of glob.glob()
+        # image_0001.jpeg is equal to ID=0
+        top_indices = np.arange(start=strt_index - 1, stop=max_index, step=seg_span * (seg_len - 1) + 1)
+        if self.shift_inflation:
+            top_indices = np.arange(start=strt_index - 1, stop=max_index)
+            pass
+        end_indices = top_indices + seg_span * (seg_len - 1)
+        # print(end_indices)
+        rectified_end_indices = np.where((end_indices > max_index), -1, end_indices)
+        # print(len(rectified_end_indices))
+
+        # Because indices_mat will be used for file search
+        # by identifying whether that element is included in file name or NOT,
+        # image_0001.jpeg is equal to ID=1
+        indices_mat = np.array(
+            [np.arange(start=1 + top_indices[i], stop=end_indices[i] + seg_span + 1, step=seg_span) for i in
+             range(len(top_indices))])
+        # print(indices_mat)
+        #
+        # print('________FIRST__________')
+        # print(image_files[0])
+        # print(indices_mat[0, :])
+        #
+        # print('________SECOND__________')
+        # print(image_files[1])
+        # print(indices_mat[1, :])
+        #
+        # print('________FINAL__________')
+        # print(image_files[-1])
+        # print(indices_mat[-1, :])
+        rectified_indices_mat = np.where((indices_mat > max_index), -1, indices_mat)
+        top_files = [image_files[elem] for elem in top_indices]
+        # end_files = [image_files[elem] for elem in rectified_end_indices]
+        segments_num = len(top_files)
+        # print("segments_num", segments_num)
+        return top_files, rectified_indices_mat, segments_num
+
+    def _make_datapath_with_mutiseg(self, root_path, seg_span, seg_len, strt_index, search_ext, ignore_exts):
+        # Initialize returns
+        top_images = []
+        top_file2indices = {}
+        total_frames = []
+
+        # Load from root_path
         class_list = os.listdir(path=root_path)
         for class_list_i in (class_list):  # クラスごとのループ
             # クラスのフォルダへのパスを取得
             class_path = os.path.join(root_path, class_list_i)
             for file_name in os.listdir(class_path):
                 img_stored_dir = os.path.join(class_path, file_name)
-                image_files = sorted(glob.glob(os.path.join(img_stored_dir, search_ext)))
-                imag_num = len(image_files)
-                max_index = imag_num - 1
-                # Count the number of available segment
-                # Because top_indices will be used for file search index from the result of glob.glob()
-                # image_0001.jpeg is equal to ID=0
-                top_indices = np.arange(start=strt_index - 1, stop=max_index, step=seg_span * (seg_len - 1) + 1)
-                # top_indices = np.arange(start=strt_index, stop=max_index, step=seg_span * (seg_len - 1) + 1)
-                if self.shift_inflation:
-                    top_indices = np.arange(start=strt_index - 1, stop=max_index)
-                    pass
-                end_indices = top_indices + seg_span * (seg_len - 1)
-                rectified_end_indices = np.where((end_indices > max_index), -1, end_indices)
-                # Because indices_mat will be used for file search
-                # by identifying whether that element is included in file name or NOT,
-                # image_0001.jpeg is equal to ID=1
-                indices_mat = np.array(
-                    [np.arange(start=1 + top_indices[i], stop=end_indices[i] + seg_span, step=seg_span) for i in
-                     range(len(top_indices))])
-                rectified_indices_mat = np.where((indices_mat > max_index), -1, indices_mat)
-                # print(file_name)
-                # print(top_indices)
-                # print(end_indices)
-                # print(rectified_end_indices)
-                # print(rectified_indices_mat)
-                # print(len(top_indices))
-                top_files = [image_files[elem] for elem in top_indices]
-                end_files = [image_files[elem] for elem in rectified_end_indices]
-
+                print(img_stored_dir)
+                top_files, rectified_indices_mat, segments_num = self._create_indices_by_filename(img_stored_dir,
+                                                                                                  seg_span,
+                                                                                                  seg_len,
+                                                                                                  strt_index,
+                                                                                                  search_ext)
                 # Remove NOT target path by specified extension
+                # TODO: Is this necessary ??
                 name, ext = os.path.splitext(file_name)
                 if ext in ignore_exts:
                     continue
 
                 # Set variables
-                video_img_directory_path = os.path.join(class_path, name)
-                self.video_list.append(video_img_directory_path)
-                self.top_images.extend(top_files)
-                self.total_frames.append(imag_num)
-                self.video_list2top_indices[video_img_directory_path] = top_indices
-                self.video_list2top_files[video_img_directory_path] = top_files
-                self.video_list2end_indices[video_img_directory_path] = end_indices
-                self.video_list2end_files[video_img_directory_path] = end_files
-                self.video_list2mat[video_img_directory_path] = indices_mat
-                self.video_list2mat_rect[video_img_directory_path] = rectified_indices_mat
-                total_segments += len(top_indices)
+                top_images.extend(top_files)
+                total_frames.append(segments_num)
 
                 # for VideoDataset
                 for i, top_filename in enumerate(top_files):
-                    self.top_file2indices[top_filename] = rectified_indices_mat[i]
+                    top_file2indices[top_filename] = rectified_indices_mat[i]
                     pass
-
                 pass
             pass
-        self.__total_segments = total_segments
-        pass
+        total_frame_sum = np.sum(np.array(total_frames))
+        # print(top_file2indices)
+        return top_images, top_file2indices, total_frames, total_frame_sum
+
+
+def get_top_imagefilename(dir_path_to_search: str, image_ext=".jpg", strt_index=1) -> str:
+    """
+    Get top image filename to feed the class MultiSegmentVideoList()
+
+    @param dir_path_to_search:
+    @param image_ext:
+    @param strt_index:
+    @return:
+    """
+    return sorted(glob.glob(os.path.join(dir_path_to_search, "*" + image_ext)))[strt_index - 1]
 
 
 def make_anno_list(root_path):

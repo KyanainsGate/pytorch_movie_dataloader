@@ -20,9 +20,28 @@ class VideoDatasetWithAnnotation(VideoDataset):
                  slash_sp_num=1,
                  img_tmpl='image_{:05d}.jpg',
                  strt_index=1,
+                 first_id_of_image_tmpl=1,
                  multi_segment=False,
                  top_file2indices=None,
                  ):
+        """
+
+        @param video_list:
+        @param anno_list:
+        @param annotated_classes:
+        @param video_frames:
+        @param label_id_dict:
+        @param seg_span:
+        @param seg_len:
+        @param phase:
+        @param transform:
+        @param slash_sp_num:
+        @param img_tmpl:
+        @param strt_index:
+        @param first_id_of_image_tmpl:
+        @param multi_segment:
+        @param top_file2indices:
+        """
         super().__init__(video_list, label_id_dict, seg_span, seg_len,
                          phase, transform, slash_sp_num,
                          img_tmpl,
@@ -37,12 +56,7 @@ class VideoDatasetWithAnnotation(VideoDataset):
         self.annotated_classes = annotated_classes
         self.video_frames = video_frames
         self.video2anno = self._frame2cls_label(anno_list, self.video_frames, self.annotated_classes)
-        # print(self.img_dir2anno_dir)
-        # print(self.anno_list)
-        # print(self.annotated_classes)
-        # print(self.video_frames)
-        # print(self.video2anno)
-        # print(self.top_file2indices)
+        self.first_id_of_image_tmpl = first_id_of_image_tmpl
         pass
 
     def __getitem__(self, index):
@@ -78,16 +92,18 @@ class VideoDatasetWithAnnotation(VideoDataset):
         # 4 Indices may include "-1" means "PAD". So to avoid confusion come from it,
         if not -1 in indices:
             # No padding included
-            id = class_labels_in_annofile[indices]
+            # TODO If ID the top image file start 0 (e.g. image0000.jpg, image00001.jpg, ... ), BUG may be shown
+            id = class_labels_in_annofile[-1 * self.first_id_of_image_tmpl + indices]
         else:
             # Applied when padding is included
             must_be_replaced_by_pad = [elem == -1 for elem in indices]
-            id_tmp = class_labels_in_annofile[indices]
+            # TODO If ID the top image file start 0 (e.g. image0000.jpg, image00001.jpg, ... ), BUG may be shown
+            id_tmp = class_labels_in_annofile[-1 * self.first_id_of_image_tmpl + indices]
             id = [int(id_tmp[i]) if (must_be_replaced_by_pad[i] == False) else self.annotated_classes.index("PAD") for i
                   in range(len(indices))]
             pass
         label = [self.annotated_classes[int(i)] for i in id]
-        # print("[Debug] pooled annotation ", top_image_filepath, indices)
+        # print("[Debug] pooled annotation", top_image_filepath, " || img: ", indices, " || annotation: ", -1 + indices)
         return np.array(id).astype(float), label
 
     def _get_clsid_from_annotation(self, annotation_filename: str, total_frmaes: int, class_list: list):
