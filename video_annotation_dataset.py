@@ -38,7 +38,8 @@ class VideoDatasetWithAnnotation(VideoDataset):
         @param slash_sp_num:
         @param img_tmpl:
         @param strt_index:
-        @param first_id_of_image_tmpl:
+        @param first_id_of_image_tmpl: Give img_tmpl, set to decide the ID-youngest image file name like 00001 or 00000
+                                        Must be corresponding to top_file2indices[0,0]
         @param multi_segment:
         @param top_file2indices:
         """
@@ -103,7 +104,8 @@ class VideoDatasetWithAnnotation(VideoDataset):
                   in range(len(indices))]
             pass
         label = [self.annotated_classes[int(i)] for i in id]
-        # print("[Debug] pooled annotation", top_image_filepath, " || img: ", indices, " || annotation: ", -1 + indices)
+        # print("[Debug] pooled annotation", top_image_filepath, " || img: ", indices, " || annotation: ",
+        #       -1 * self.first_id_of_image_tmpl + indices)
         return np.array(id).astype(float), label
 
     def _get_clsid_from_annotation(self, annotation_filename: str, total_frmaes: int, class_list: list):
@@ -120,7 +122,7 @@ class VideoDatasetWithAnnotation(VideoDataset):
         """
         # TODO Handling of duplicated labels. To avoid duplication,
         #  in this implementation class_id is overridden by following for loop
-        #  (e.g.)
+        #  (e.g.) if ID=2 and ID=3 happened at the same time, load label data shows ID=3 because 3 is larger.
         df = pd.read_csv(annotation_filename)
         frame2cls = np.zeros(total_frmaes)
         for idx in df.index.values:
