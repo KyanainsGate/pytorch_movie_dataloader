@@ -15,6 +15,7 @@ if __name__ == '__main__':
     p.add_argument('to_path', type=str, )
     p.add_argument('--scale', type=str, default="-1:256")
     p.add_argument('--movie_ext', type=str, default=".mp4")
+    p.add_argument('--file_template', type=str, default="image_%05d.jpg")
     args = p.parse_args()
 
     # 動画が保存されたフォルダ「kinetics_videos」にある、クラスの種類とパスを取得
@@ -22,6 +23,7 @@ if __name__ == '__main__':
     to_path = args.to_path
     movie_ext = args.movie_ext
     scale_ = args.scale
+    f_template = args.file_template
     class_list = os.listdir(from_path)
 
     # 各クラスの動画ファイルを画像ファイルに変換する
@@ -53,8 +55,8 @@ if __name__ == '__main__':
 
             # ffmpegを実行させ、動画ファイルをjpgにする （高さは256ピクセルで幅はアスペクト比を変えない）
             # kineticsの動画の場合10秒になっており、大体300ファイルになる（30 frames /sec）
-            cmd = 'ffmpeg -i \"{}\" -vf scale={} \"{}/image_%05d.jpg\"'.format(
-                video_file_path, scale_, dst_directory_path)
+            cmd = 'ffmpeg -i \"{}\" -vf scale={} \"{}/{}\"'.format(
+                video_file_path, scale_, dst_directory_path, f_template)
             print("[DEBUG]", cmd)
             subprocess.call(cmd, shell=True)
 
