@@ -60,7 +60,7 @@ def _read_and_search_cls(path_to_annotation, total_frames, void_class="N/A"):
 
 def _review_all_cls_distrib(anno2cls_distrib: dict):
     """
-    Give the dictionary composed of the pair {filepath_to_csv: the dictionary of
+    Given the dictionary composed of the pair {filepath_to_csv: the dictionary of
     annotation class 2 frames like {"Walk": 32, ..., } },
     which is equivalent to the result of _read_and_search_cls(),
     output the summed up result of them

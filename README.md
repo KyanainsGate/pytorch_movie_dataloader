@@ -102,10 +102,36 @@ The annotation format is reference to
 ```shell
 python sample_anno.py
 ```
-- The annotation format references to the [The Toyota Smarthome Untrimmed dataset](https://project.inria.fr/toyotasmarthome/)
+- The annotations format is only adopted to [The Toyota Smarthome Untrimmed dataset](https://project.inria.fr/toyotasmarthome/)
 - The 6th outputs of batch output (=`elem[5]:`) is class labels of each frame
 
+## Support scripts
+### Create image files for training
+```shell
+python video_download/separate_img.py <raw-videos> data/ --file_template image_%06d.jpg
+```
+The `<raw-videos>` structure must be set as followings; 
+```shell
+raw-videos
+    |-- classA
+    |   |-- hoge.mp4
+    |   `-- piyo.mp4
+    |   
+    |-- classB
+    |   |-- hogegege.mp4
+    |   |   :
+    :   :
+```
+### Analysis dataset invariance
+[search_annotation_cls.py](scripts/search_annotation_cls.py) gives the number of the frames which is assigned to class and not assigned class as `N/A`
+```shell
+# (e.g.)
+python scripts/search_annotation_cls.py  root_path root_path_of_annotation --draw
+```
+
+
 ## Reference
+- [torchvision.datasets.DatasetFolder](https://pytorch.org/vision/stable/datasets.html#base-classes-for-custom-datasets) for basic design of the directory structure 
 - [pytorch_advanced
 ](https://github.com/YutaroOgawa/pytorch_advanced)
 - Project page of [Toyota Smart Home](https://project.inria.fr/toyotasmarthome/)
