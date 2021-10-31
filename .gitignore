@@ -13,3 +13,4 @@ data/
 # dataset
 *.zip
 test.gif
+cls_histogram.png
